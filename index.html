@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>信贷初阶题目</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --bg: #f8f9fa;
+            --text: #333;
+            --border: #dee2e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h1 { font-size: 1.5rem; text-align: center; margin-top: 0; }
+        .setup-screen, .quiz-screen { display: none; }
+        .active { display: block; }
+        .status-msg { text-align: center; margin-bottom: 20px; font-size: 0.95rem; }
+        
+        /* 模块卡片样式 */
+        .module-cards { display: flex; flex-direction: column; gap: 20px; }
+        .card { border: 1px solid var(--border); border-radius: 8px; padding: 20px; background: #fafafa; }
+        .card h3 { margin-top: 0; margin-bottom: 5px; color: var(--primary); font-size: 1.1rem; }
+        .card p { font-size: 0.85rem; color: #666; margin-top: 0; margin-bottom: 15px; }
+
+        button {
+            background-color: var(--primary); color: #fff; border: none;
+            padding: 12px 15px; font-size: 1rem; border-radius: 6px;
+            cursor: pointer; transition: 0.2s; flex: 1;
+        }
+        button:active { opacity: 0.8; transform: scale(0.98); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; transform: none; }
+        .btn-outline { background-color: transparent; color: var(--primary); border: 1px solid var(--primary); }
+        .btn-success { background-color: var(--success); }
+        .setup-actions { display: flex; flex-direction: column; gap: 10px; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; gap: 5px; }
+        .question-type { font-weight: bold; color: var(--primary); font-size: 0.85rem; padding: 3px 6px; background: #e6f2ff; border-radius: 4px; flex-shrink: 0; }
+        .top-actions { display: flex; gap: 5px; flex-shrink: 0; }
+        .menu-btn { flex: none; width: auto; padding: 6px 10px; font-size: 0.85rem; }
+        
+        .question-text { font-size: 1.1rem; margin-bottom: 20px; word-wrap: break-word; }
+        .options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .option-label {
+            display: flex; align-items: flex-start; padding: 12px;
+            border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+            word-break: break-all; transition: all 0.2s;
+        }
+        .option-label:active { background-color: #f0f0f0; }
+        .option-label input { margin-top: 4px; margin-right: 10px; transform: scale(1.2); flex-shrink: 0; }
+        
+        .opt-selected-correct { background-color: var(--success) !important; color: #fff !important; border-color: var(--success) !important; }
+        .opt-selected-incorrect { background-color: var(--danger) !important; color: #fff !important; border-color: var(--danger) !important; }
+        .opt-unselected-correct { color: var(--success) !important; font-weight: bold; border-color: var(--success) !important; background-color: #f8fff9; }
+        
+        .feedback { margin: 15px 0; padding: 12px 15px; border-radius: 6px; display: none; font-weight: bold; font-size: 0.95rem; }
+        .correct { background-color: #d4edda; color: var(--success); border: 1px solid #c3e6cb; }
+        .incorrect { background-color: #f8d7da; color: var(--danger); border: 1px solid #f5c6cb; }
+        
+        .nav-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 100; }
+        .modal-content { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            background: #fff; padding: 20px; border-radius: 15px 15px 0 0; 
+            max-height: 80vh; overflow-y: auto; display: flex; flex-direction: column;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: sticky; top: 0; background: #fff; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .modal-header h3 { margin: 0; font-size: 1.1rem; }
+        .close-btn { background: none; border: none; color: #666; font-size: 1.5rem; padding: 0; width: auto; flex: none; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; }
+        .grid-item { 
+            padding: 8px 0; text-align: center; border: 1px solid var(--border); 
+            border-radius: 6px; font-size: 0.9rem; cursor: pointer; color: var(--text); background: #fff;
+        }
+        .grid-item.answered-correct { background-color: var(--success); color: #fff; border-color: var(--success); }
+        .grid-item.answered-incorrect { background-color: var(--danger); color: #fff; border-color: var(--danger); }
+        .grid-item.current { border: 2px solid var(--primary); font-weight: bold; box-shadow: 0 0 5px rgba(0,123,255,0.5); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="setupScreen" class="setup-screen active">
+        <h1>信贷初阶题目</h1>
+        <div id="statusMsg" class="status-msg">正在请求题库文件...</div>
+        
+        <div class="module-cards">
+            <div class="card">
+                <h3>顺序刷题</h3>
+                <p>按题库原有顺序完整测验</p>
+                <div class="setup-actions">
+                    <button id="resumeSeqBtn" class="btn-success" style="display: none;">继续上次进度</button>
+                    <button id="startSeqBtn" class="start-btn" disabled>开始</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>随机100题</h3>
+                <p>每次从题库中随机抽取100题</p>
+                <div class="setup-actions">
+                    <button id="resumeRndBtn" class="btn-success" style="display: none;">继续上次进度</button>
+                    <button id="startRndBtn" class="start-btn" disabled>开始</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="quizScreen" class="quiz-screen">
+        <div class="top-bar">
+            <span class="question-type" id="qType">单选题</span>
+            <span style="font-size: 0.85rem; color: #666;" id="qProgress">1 / 100</span>
+            <div class="top-actions">
+                <button class="btn-outline menu-btn" id="homeBtn">首页</button>
+                <button class="btn-outline menu-btn" id="menuBtn">目录</button>
+            </div>
+        </div>
+        <div class="question-text" id="qText">题目内容</div>
+        <div class="options" id="qOptions"></div>
+        <div id="feedback" class="feedback"></div>
+        
+        <div class="nav-actions">
+            <button id="prevBtn" class="btn-outline">上一题</button>
+            <button id="submitBtn">提交</button>
+            <button id="nextBtn" class="btn-outline">下一题</button>
+        </div>
+    </div>
+</div>
+
+<div id="indexModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>题目目录</h3>
+            <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <div class="grid" id="indexGrid"></div>
+    </div>
+</div>
+
+<script>
+    const TXT_FILE_URL = '信贷初阶题目.txt'; 
+    const KEY_SEQ = 'credit_quiz_state_seq';
+    const KEY_RND = 'credit_quiz_state_rnd';
+
+    let rawQuestions = []; 
+    let currentActiveKey = ''; // 当前所选模块对应的 localStorage key
+    let appState = {
+        questions: [],   
+        currentIndex: 0, 
+        answers: {}      
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        checkSavedState();
+        fetch(TXT_FILE_URL)
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP status ' + res.status);
+                return res.text();
+            })
+            .then(text => {
+                parseText(text);
+                if (rawQuestions.length > 0) {
+                    const msgEl = document.getElementById('statusMsg');
+                    msgEl.textContent = `题库加载成功，共 ${rawQuestions.length} 题`;
+                    msgEl.style.color = 'var(--success)';
+                    document.querySelectorAll('.start-btn').forEach(btn => btn.disabled = false);
+                } else {
+                    throw new Error('未解析到题目');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                const msgEl = document.getElementById('statusMsg');
+                msgEl.textContent = '加载失败：未找到 TXT 文件或格式错误。';
+                msgEl.style.color = 'var(--danger)';
+            });
+    });
+
+    // 检查两个模块的进度状态
+    function checkSavedState() {
+        // 顺序模式
+        const savedSeq = localStorage.getItem(KEY_SEQ);
+        if (savedSeq) {
+            try {
+                const parsed = JSON.parse(savedSeq);
+                if (parsed.questions && parsed.questions.length > 0) {
+                    document.getElementById('resumeSeqBtn').style.display = 'block';
+                }
+            } catch (e) {
+                localStorage.removeItem(KEY_SEQ);
+                document.getElementById('resumeSeqBtn').style.display = 'none';
+            }
+        } else {
+            document.getElementById('resumeSeqBtn').style.display = 'none';
+        }
+
+        // 随机模式
+        const savedRnd = localStorage.getItem(KEY_RND);
+        if (savedRnd) {
+            try {
+                const parsed = JSON.parse(savedRnd);
+                if (parsed.questions && parsed.questions.length > 0) {
+                    document.getElementById('resumeRndBtn').style.display = 'block';
+                }
+            } catch (e) {
+                localStorage.removeItem(KEY_RND);
+                document.getElementById('resumeRndBtn').style.display = 'none';
+            }
+        } else {
+            document.getElementById('resumeRndBtn').style.display = 'none';
+        }
+    }
+
+    function saveState() {
+        if (currentActiveKey) {
+            localStorage.setItem(currentActiveKey, JSON.stringify(appState));
+        }
+    }
+
+    // --- 顺序刷题事件 ---
+    document.getElementById('startSeqBtn').addEventListener('click', () => {
+        if (localStorage.getItem(KEY_SEQ) && !confirm('重新开始将覆盖“顺序刷题”现有的进度记录，是否继续？')) return;
+        currentActiveKey = KEY_SEQ;
+        appState.questions = JSON.parse(JSON.stringify(rawQuestions));
+        appState.currentIndex = 0;
+        appState.answers = {};
+        saveState();
+        startQuizUI();
+    });
+
+    document.getElementById('resumeSeqBtn').addEventListener('click', () => {
+        currentActiveKey = KEY_SEQ;
+        appState = JSON.parse(localStorage.getItem(KEY_SEQ));
+        startQuizUI();
+    });
+
+    // --- 随机100题事件 ---
+    document.getElementById('startRndBtn').addEventListener('click', () => {
+        if (localStorage.getItem(KEY_RND) && !confirm('重新开始将覆盖“随机100题”现有的进度记录，是否继续？')) return;
+        currentActiveKey = KEY_RND;
+        appState.questions = JSON.parse(JSON.stringify(rawQuestions));
+        shuffleArray(appState.questions);
+        appState.questions = appState.questions.slice(0, 100);
+        appState.currentIndex = 0;
+        appState.answers = {};
+        saveState();
+        startQuizUI();
+    });
+
+    document.getElementById('resumeRndBtn').addEventListener('click', () => {
+        currentActiveKey = KEY_RND;
+        appState = JSON.parse(localStorage.getItem(KEY_RND));
+        startQuizUI();
+    });
+
+    // --- 导航与系统事件 ---
+    document.getElementById('homeBtn').addEventListener('click', () => {
+        if (confirm('确定要返回首页吗？你可以通过“继续上次进度”随时回到当前题目。')) {
+            document.getElementById('quizScreen').classList.remove('active');
+            document.getElementById('setupScreen').classList.add('active');
+            checkSavedState();
+        }
+    });
+
+    function parseText(text) {
+        rawQuestions = [];
+        text = text.replace(/\\s*/g, '');
+        const blocks = text.split(/\n(?=\d+\s+(?:单选题|多选题|判断题))/);
+        
+        blocks.forEach(block => {
+            const lines = block.trim().split('\n').filter(l => l.trim() !== '');
+            if (lines.length < 3) return;
+
+            const headerMatch = lines[0].match(/\d+\s+(单选题|多选题|判断题)/);
+            if (!headerMatch) return;
+            const type = headerMatch[1];
+
+            let answer = '';
+            let answerIndex = -1;
+            for (let i = lines.length - 1; i >= 0; i--) {
+                if (lines[i].startsWith('正确答案：')) {
+                    answer = lines[i].replace('正确答案：', '').trim();
+                    answerIndex = i;
+                    break;
+                }
+            }
+            if (answerIndex === -1) return;
+
+            let questionText = [], options = [];
+            for (let i = 1; i < answerIndex; i++) {
+                const line = lines[i].trim();
+                if (/^[A-Z][\s、.]/.test(line)) {
+                    options.push(line);
+                } else if (line !== '[图片]') { 
+                    questionText.push(line);
+                }
+            }
+
+            rawQuestions.push({
+                type: type,
+                text: questionText.join('<br>'),
+                options: options,
+                answer: answer
+            });
+        });
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function startQuizUI() {
+        document.getElementById('setupScreen').classList.remove('active');
+        document.getElementById('quizScreen').classList.add('active');
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const q = appState.questions[appState.currentIndex];
+        const hasAnswered = appState.answers.hasOwnProperty(appState.currentIndex);
+        const savedAnswer = hasAnswered ? appState.answers[appState.currentIndex] : null;
+
+        document.getElementById('qType').textContent = q.type;
+        document.getElementById('qProgress').textContent = `${appState.currentIndex + 1} / ${appState.questions.length}`;
+        document.getElementById('qText').innerHTML = q.text;
+        
+        const optionsContainer = document.getElementById('qOptions');
+        optionsContainer.innerHTML = '';
+        const inputType = q.type === '多选题' ? 'checkbox' : 'radio';
+        
+        q.options.forEach((opt) => {
+            const letter = opt.match(/^[A-Z]/)[0];
+            const label = document.createElement('label');
+            label.className = 'option-label';
+            
+            const isChecked = hasAnswered && savedAnswer.selected.includes(letter) ? 'checked' : '';
+            
+            if (hasAnswered) {
+                const isSelected = savedAnswer.selected.includes(letter);
+                const isCorrectOption = q.answer.includes(letter);
+
+                if (isSelected && isCorrectOption) {
+                    label.classList.add('opt-selected-correct');
+                } else if (isSelected && !isCorrectOption) {
+                    label.classList.add('opt-selected-incorrect');
+                } else if (!isSelected && isCorrectOption) {
+                    label.classList.add('opt-unselected-correct');
+                }
+            }
+            
+            label.innerHTML = `<input type="${inputType}" name="answer" value="${letter}" ${isChecked}> ${opt}`;
+            optionsContainer.appendChild(label);
+        });
+
+        const feedbackEl = document.getElementById('feedback');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        optionsContainer.onchange = () => {
+            feedbackEl.style.display = 'none';
+            submitBtn.textContent = '提交';
+            document.querySelectorAll('.option-label').forEach(lbl => {
+                lbl.classList.remove('opt-selected-correct', 'opt-selected-incorrect', 'opt-unselected-correct');
+            });
+        };
+
+        if (hasAnswered) {
+            feedbackEl.style.display = 'block';
+            feedbackEl.className = savedAnswer.isCorrect ? 'feedback correct' : 'feedback incorrect';
+            feedbackEl.innerHTML = savedAnswer.isCorrect ? `回答正确！` : `回答错误。正确答案：${q.answer}`;
+            submitBtn.textContent = '修改答案';
+        } else {
+            feedbackEl.style.display = 'none';
+            submitBtn.textContent = '提交';
+        }
+
+        document.getElementById('prevBtn').disabled = appState.currentIndex === 0;
+        document.getElementById('nextBtn').disabled = appState.currentIndex === appState.questions.length - 1;
+        
+        saveState();
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        const q = appState.questions[appState.currentIndex];
+        const selectedArr = Array.from(document.querySelectorAll('input[name="answer"]:checked')).map(cb => cb.value).sort();
+        const selected = selectedArr.join(',');
+
+        if (!selected) { alert('请先选择答案'); return; }
+
+        const isCorrect = selected === q.answer;
+        appState.answers[appState.currentIndex] = { selected: selected, isCorrect: isCorrect };
+        
+        renderQuestion(); 
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (appState.currentIndex > 0) { appState.currentIndex--; renderQuestion(); }
+    });
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        if (appState.currentIndex < appState.questions.length - 1) { appState.currentIndex++; renderQuestion(); }
+    });
+
+    const indexModal = document.getElementById('indexModal');
+    document.getElementById('menuBtn').addEventListener('click', () => {
+        const grid = document.getElementById('indexGrid');
+        grid.innerHTML = '';
+        appState.questions.forEach((_, idx) => {
+            const btn = document.createElement('div');
+            btn.className = 'grid-item';
+            btn.textContent = idx + 1;
+            
+            if (appState.answers[idx]) {
+                btn.classList.add(appState.answers[idx].isCorrect ? 'answered-correct' : 'answered-incorrect');
+            }
+            if (idx === appState.currentIndex) {
+                btn.classList.add('current');
+            }
+            
+            btn.addEventListener('click', () => {
+                appState.currentIndex = idx;
+                renderQuestion();
+                indexModal.style.display = 'none';
+            });
+            grid.appendChild(btn);
+        });
+        indexModal.style.display = 'block';
+        
+        setTimeout(() => {
+            const currentItem = grid.querySelector('.current');
+            if (currentItem) currentItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 10);
+    });
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => { indexModal.style.display = 'none'; });
+    indexModal.addEventListener('click', (e) => { if(e.target === indexModal) indexModal.style.display = 'none'; });
+
+</script>
+</body>
+</html>
